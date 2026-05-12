@@ -13,7 +13,7 @@ pub fn init() -> color_eyre::Result<()> {
     std::fs::create_dir_all(directory.clone())?;
     let log_path = directory.join(LOG_FILE.clone());
     let log_file = std::fs::File::create(log_path)?;
-    let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::INFO.into());
+    let env_filter = EnvFilter::builder().with_default_directive(tracing::Level::DEBUG.into());
     // If the `RUST_LOG` environment variable is set, use that as the default, otherwise use the
     // value of the `LOG_ENV` environment variable. If the `LOG_ENV` environment variable contains
     // errors, then this will return an error.

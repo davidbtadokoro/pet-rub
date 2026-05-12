@@ -1,18 +1,31 @@
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{
+    Frame,
+    layout::{Alignment, Rect},
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders, Paragraph},
+};
 use tokio::sync::mpsc::UnboundedSender;
 
 use super::Component;
 use crate::{action::Action, config::Config};
 
-#[derive(Default)]
 pub struct Home {
     command_tx: Option<UnboundedSender<Action>>,
     config: Config,
 }
 
+impl Default for Home {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Home {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            command_tx: None,
+            config: Config::default(),
+        }
     }
 }
 
@@ -29,19 +42,27 @@ impl Component for Home {
 
     fn update(&mut self, action: Action) -> color_eyre::Result<Option<Action>> {
         match action {
-            Action::Tick => {
-                // add any logic here that should run on every tick
-            }
-            Action::Render => {
-                // add any logic here that should run on every render
-            }
             _ => {}
         }
         Ok(None)
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
-        frame.render_widget(Paragraph::new("hello world"), area);
+        frame.render_widget(
+            Paragraph::new(String::new())
+                .block(
+                    Block::default()
+                        .title(" pet-rub ")
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .border_style(Style::default())
+                        .border_type(BorderType::Rounded),
+                )
+                .style(Style::default().fg(Color::Cyan))
+                .alignment(Alignment::Center),
+            area,
+        );
+
         Ok(())
     }
 }

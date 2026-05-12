@@ -12,4 +12,10 @@ pub enum Action {
     ClearScreen,
     Error(String),
     Help,
+    LeiUpdateMaildir,
+    LeiEnterProcessing,
+    LeiEnterCreating,
+    LeiEnterUpdating,
+    LeiExitProcessing,
+    LeiEnterIdle,
 }
