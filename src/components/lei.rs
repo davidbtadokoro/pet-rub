@@ -7,6 +7,8 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
+use serde::{Deserialize, Serialize};
+use strum::Display;
 use tokio::{process::Command, sync::mpsc::UnboundedSender};
 use tracing::{error, info};
 
@@ -16,8 +18,8 @@ const MAX_NOTIFICATION_TICKS: usize = 8;
 const MAX_SPINNER: usize = 4;
 const SPINNER: [&str; MAX_SPINNER] = ["", ".", "..", "..."];
 
-#[derive(PartialEq)]
-enum LocalMode {
+#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+pub enum LocalMode {
     Idle,
     Processing,
     Creating,
@@ -55,7 +57,7 @@ impl Lei {
             // Check if Maildir already exists and create one, otherwise
             if !maildir.exists() {
                 info!("creating maildir {maildir_str}");
-                tx.send(Action::LeiEnterCreating).unwrap();
+                tx.send(Action::LeiSetMode(LocalMode::Creating)).unwrap();
                 if let Ok(exit_status) = Command::new("lei")
                     .arg("q")
                     .arg(format!("--include={lore_url}/{list}/"))
@@ -78,7 +80,7 @@ impl Lei {
 
             // Update Maildir
             info!("updating maildir {maildir_str}");
-            tx.send(Action::LeiEnterUpdating).unwrap();
+            tx.send(Action::LeiSetMode(LocalMode::Updating)).unwrap();
             if let Ok(exit_status) = Command::new("lei")
                 .arg("up")
                 .arg(maildir_str)
@@ -138,6 +140,7 @@ impl Component for Lei {
                     }
                 }
             }
+            Action::LeiSetMode(local_mode) => self.local_mode = local_mode,
             Action::LeiUpdateMaildir => self.update_lei_maildir(
                 "https://lore.kernel.org".to_string(),
                 "amd-gfx".to_string(),
@@ -146,12 +149,6 @@ impl Component for Lei {
             Action::LeiEnterProcessing => {
                 self.spinner = 0;
                 self.local_mode = LocalMode::Processing;
-            }
-            Action::LeiEnterCreating => {
-                self.local_mode = LocalMode::Creating;
-            }
-            Action::LeiEnterUpdating => {
-                self.local_mode = LocalMode::Updating;
             }
             Action::LeiExitProcessing => {
                 self.notification_ticks = 0;
