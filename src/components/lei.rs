@@ -17,6 +17,7 @@ use crate::{action::Action, components::Component, config::Config};
 const MAX_NOTIFICATION_TICKS: usize = 8;
 const MAX_SPINNER: usize = 4;
 const SPINNER: [&str; MAX_SPINNER] = ["", ".", "..", "..."];
+const LAST_MONTH_QUERY: &str = "((s:patch OR s:rfc) AND NOT s:re:) AND rt:1.month.ago..";
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum LocalMode {
@@ -144,7 +145,7 @@ impl Component for Lei {
             Action::LeiUpdateMaildir => self.update_lei_maildir(
                 "https://lore.kernel.org".to_string(),
                 "amd-gfx".to_string(),
-                "((s:patch OR s:rfc) AND NOT s:re:) AND rt:1.month.ago..".to_string(),
+                LAST_MONTH_QUERY.to_string(),
             ),
             Action::LeiEnterProcessing => {
                 self.spinner = 0;
