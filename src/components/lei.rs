@@ -47,22 +47,22 @@ impl Lei {
         }
     }
 
-    fn update_lei_maildir(&self, lore_url: String, list: String, query: String) {
+    fn update_local_inbox(&self, lore_url: String, list: String, query: String) {
         let tx = self.command_tx.clone().unwrap();
-        let mut maildir = self.config.config.data_dir.clone();
-        maildir.push(list.clone());
+        let mut inbox_dir = self.config.config.data_dir.clone();
+        inbox_dir.push(list.clone());
         tokio::spawn(async move {
             tx.send(Action::LeiEnterProcessing).unwrap();
-            let maildir_str = maildir.to_str().unwrap();
+            let inbox_dir_str = inbox_dir.to_str().unwrap();
 
-            // Check if Maildir already exists and create one, otherwise
-            if !maildir.exists() {
-                info!("creating maildir {maildir_str}");
+            // Check if local Public-Inbox already exists and create one, otherwise
+            if !inbox_dir.exists() {
+                info!("creating public inbox {inbox_dir_str}");
                 tx.send(Action::LeiSetMode(LocalMode::Creating)).unwrap();
                 if let Ok(exit_status) = Command::new("lei")
                     .arg("q")
-                    .arg(format!("--include={lore_url}/{list}/"))
-                    .arg(format!("--output={maildir_str}"))
+                    .arg(format!("--only={lore_url}/{list}/"))
+                    .arg(format!("--output=v2:{inbox_dir_str}"))
                     .arg("--threads")
                     .arg("--dedupe=mid")
                     .arg(query)
@@ -79,12 +79,12 @@ impl Lei {
                 }
             }
 
-            // Update Maildir
-            info!("updating maildir {maildir_str}");
+            // Update Public Inbox
+            info!("updating public inbox {inbox_dir_str}");
             tx.send(Action::LeiSetMode(LocalMode::Updating)).unwrap();
             if let Ok(exit_status) = Command::new("lei")
                 .arg("up")
-                .arg(maildir_str)
+                .arg(inbox_dir_str)
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status()
@@ -116,7 +116,7 @@ impl Component for Lei {
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
         let action = match self.local_mode {
             LocalMode::Idle => match key.code {
-                KeyCode::Char('r') => Some(Action::LeiUpdateMaildir),
+                KeyCode::Char('r') => Some(Action::LeiUpdateInbox),
                 _ => None,
             },
             _ => None,
@@ -142,7 +142,7 @@ impl Component for Lei {
                 }
             }
             Action::LeiSetMode(local_mode) => self.local_mode = local_mode,
-            Action::LeiUpdateMaildir => self.update_lei_maildir(
+            Action::LeiUpdateInbox => self.update_local_inbox(
                 "https://lore.kernel.org".to_string(),
                 "amd-gfx".to_string(),
                 LAST_MONTH_QUERY.to_string(),
@@ -176,8 +176,8 @@ impl Component for Lei {
             let text = match self.local_mode {
                 LocalMode::Idle => "Idle".to_string(),
                 LocalMode::Processing => format!("Processing{}", SPINNER[self.spinner]),
-                LocalMode::Creating => format!("Creating maildir{}", SPINNER[self.spinner]),
-                LocalMode::Updating => format!("Updating maildir{}", SPINNER[self.spinner]),
+                LocalMode::Creating => format!("Creating inbox{}", SPINNER[self.spinner]),
+                LocalMode::Updating => format!("Updating inbox{}", SPINNER[self.spinner]),
                 LocalMode::ExitingProcessing => "Finished processing!".to_string(),
             };
             let style = match self.local_mode {

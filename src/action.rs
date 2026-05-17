@@ -15,7 +15,7 @@ pub enum Action {
     Error(String),
     Help,
     LeiSetMode(lei::LocalMode),
-    LeiUpdateMaildir,
+    LeiUpdateInbox,
     LeiEnterProcessing,
     LeiExitProcessing,
     LeiEnterIdle,
