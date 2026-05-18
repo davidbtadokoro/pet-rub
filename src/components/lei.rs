@@ -177,7 +177,7 @@ impl Component for Lei {
                     self.notification_ticks += 1;
                     if self.notification_ticks >= MAX_NOTIFICATION_TICKS {
                         self.notification_ticks = 0;
-                        return Ok(Some(Action::LeiEnterIdle));
+                        return Ok(Some(Action::LeiSetMode(LocalMode::Idle)));
                     }
                 } else if self.local_mode != LocalMode::Idle {
                     self.spinner += 1;
@@ -203,9 +203,6 @@ impl Component for Lei {
             Action::LeiExitProcessing => {
                 self.notification_ticks = 0;
                 self.local_mode = LocalMode::ExitingProcessing;
-            }
-            Action::LeiEnterIdle => {
-                self.local_mode = LocalMode::Idle;
             }
             _ => {}
         }
