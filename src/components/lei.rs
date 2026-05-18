@@ -121,7 +121,7 @@ impl Lei {
             if let Ok(output) = File::create(&json_path_str) {
                 if let Ok(exit_status) = Command::new("lei")
                     .arg("q")
-                    .arg(format!("--only={inbox_dir_str}"))
+                    .arg("--only=https://lore.kernel.org/amd-gfx/")
                     .arg("--no-local")
                     .arg("--threads")
                     .arg("--dedupe=mid")
@@ -134,6 +134,7 @@ impl Lei {
                     if !exit_status.success() {
                         error!("lei command exit status was unsuccessful {exit_status:?}");
                     }
+                    tx.send(Action::PatchsetsList(json_path_str.to_string())).unwrap();
                 } else {
                     error!("failed to execute command");
                 }

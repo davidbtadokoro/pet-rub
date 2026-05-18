@@ -19,4 +19,7 @@ pub enum Action {
     LeiEnterProcessing,
     LeiExitProcessing,
     LeiFetchPatchsets,
+    PatchsetsList(String),
+    PatchsetsAddIndex,
+    PatchsetsSubIndex,
 }
