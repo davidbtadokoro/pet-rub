@@ -1,4 +1,4 @@
-use std::process::Stdio;
+use std::{fs::File, process::Stdio};
 
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
@@ -25,6 +25,7 @@ pub enum LocalMode {
     Processing,
     Creating,
     Updating,
+    Fetching,
     ExitingProcessing,
 }
 
@@ -100,6 +101,49 @@ impl Lei {
             tx.send(Action::LeiExitProcessing).unwrap();
         });
     }
+
+    fn fetch_patchsets(&self, list: String, query: String) {
+        let tx = self.command_tx.clone().unwrap();
+        let mut data_dir = self.config.config.data_dir.clone();
+        tokio::spawn(async move {
+            tx.send(Action::LeiEnterProcessing).unwrap();
+
+            data_dir.push(format!("{list}"));
+            let inbox_dir_str = data_dir.to_str().unwrap();
+            let mut data_dir = data_dir.clone();
+            data_dir.pop();
+            data_dir.push(format!("{list}.json"));
+            let json_path_str = data_dir.to_str().unwrap();
+
+            // Update Public Inbox
+            info!("fetching patchsets from {inbox_dir_str}");
+            tx.send(Action::LeiSetMode(LocalMode::Fetching)).unwrap();
+            if let Ok(output) = File::create(&json_path_str) {
+                if let Ok(exit_status) = Command::new("lei")
+                    .arg("q")
+                    .arg(format!("--only={inbox_dir_str}"))
+                    .arg("--no-local")
+                    .arg("--threads")
+                    .arg("--dedupe=mid")
+                    .arg(query)
+                    .stdout(output)
+                    .stderr(Stdio::null())
+                    .status()
+                    .await
+                {
+                    if !exit_status.success() {
+                        error!("lei command exit status was unsuccessful {exit_status:?}");
+                    }
+                } else {
+                    error!("failed to execute command");
+                }
+            } else {
+                error!("failed to create {json_path_str}");
+            }
+
+            tx.send(Action::LeiExitProcessing).unwrap();
+        });
+    }
 }
 
 impl Component for Lei {
@@ -117,6 +161,7 @@ impl Component for Lei {
         let action = match self.local_mode {
             LocalMode::Idle => match key.code {
                 KeyCode::Char('r') => Some(Action::LeiUpdateInbox),
+                KeyCode::Char('f') => Some(Action::LeiFetchPatchsets),
                 _ => None,
             },
             _ => None,
@@ -144,6 +189,10 @@ impl Component for Lei {
             Action::LeiSetMode(local_mode) => self.local_mode = local_mode,
             Action::LeiUpdateInbox => self.update_local_inbox(
                 "https://lore.kernel.org".to_string(),
+                "amd-gfx".to_string(),
+                LAST_MONTH_QUERY.to_string(),
+            ),
+            Action::LeiFetchPatchsets => self.fetch_patchsets(
                 "amd-gfx".to_string(),
                 LAST_MONTH_QUERY.to_string(),
             ),
@@ -178,11 +227,12 @@ impl Component for Lei {
                 LocalMode::Processing => format!("Processing{}", SPINNER[self.spinner]),
                 LocalMode::Creating => format!("Creating inbox{}", SPINNER[self.spinner]),
                 LocalMode::Updating => format!("Updating inbox{}", SPINNER[self.spinner]),
+                LocalMode::Fetching => format!("Fetching patchsets{}", SPINNER[self.spinner]),
                 LocalMode::ExitingProcessing => "Finished processing!".to_string(),
             };
             let style = match self.local_mode {
                 LocalMode::Idle | LocalMode::ExitingProcessing => Style::default().fg(Color::Cyan),
-                LocalMode::Processing | LocalMode::Creating | LocalMode::Updating => {
+                LocalMode::Processing | LocalMode::Creating | LocalMode::Updating | LocalMode::Fetching => {
                     Style::default().fg(Color::Yellow)
                 }
             };

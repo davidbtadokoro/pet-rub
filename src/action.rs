@@ -19,4 +19,5 @@ pub enum Action {
     LeiEnterProcessing,
     LeiExitProcessing,
     LeiEnterIdle,
+    LeiFetchPatchsets,
 }
