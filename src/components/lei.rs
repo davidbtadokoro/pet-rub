@@ -222,7 +222,7 @@ impl Component for Lei {
             Paragraph::new(text)
                 .block(
                     Block::default()
-                        .title(" lei ")
+                        .title(" status ")
                         .title_alignment(Alignment::Center)
                         .borders(Borders::ALL)
                         .border_style(style)
