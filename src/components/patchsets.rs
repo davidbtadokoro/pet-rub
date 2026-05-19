@@ -254,7 +254,16 @@ impl Component for Patchsets {
             let list_items: Vec<String> = self
                 .roots
                 .iter()
-                .map(|root| self.map_id_message.get(&root.m_id).unwrap().subject.clone())
+                .map(|root| {
+                    let message = self.map_id_message.get(&root.m_id).unwrap().clone();
+                    let author_name = if let Some(name) = message.from[0][0].as_ref() {
+                        name
+                    } else {
+                        "null"
+                    };
+                    let author_email = message.from[0][1].as_ref().unwrap();
+                    format!("{} | {} <{}>", message.subject, author_name, author_email)
+                })
                 .collect();
             let list_block = Block::default().borders(Borders::NONE);
             let list = List::new(list_items)
