@@ -45,8 +45,9 @@ pub struct Patchsets {
     map_id_message: HashMap<String, Message>,
     map_id_children: HashMap<String, Vec<String>>,
     roots: Vec<Node>,
-    index: usize,
+    list_index: usize,
     thread: Vec<String>,
+    thread_index: usize,
 }
 
 impl Patchsets {
@@ -57,8 +58,9 @@ impl Patchsets {
             map_id_message: HashMap::new(),
             map_id_children: HashMap::new(),
             roots: Vec::new(),
-            index: 0,
+            list_index: 0,
             thread: Vec::new(),
+            thread_index: 0,
         }
     }
 
@@ -67,7 +69,7 @@ impl Patchsets {
         self.map_id_message = HashMap::new();
         self.map_id_children = HashMap::new();
         self.roots = Vec::new();
-        self.index = 0;
+        self.list_index = 0;
 
         let data = read_to_string(&json_path_str)?;
 
@@ -149,8 +151,10 @@ impl Patchsets {
     }
 
     fn open_thread(&mut self) {
-        let root_m_id = self.roots.get(self.index).unwrap().m_id.clone();
-        self.index = 0;
+        self.thread = Vec::new();
+        self.thread_index = 0;
+
+        let root_m_id = self.roots.get(self.list_index).unwrap().m_id.clone();
 
         let mut stack = vec![(0, root_m_id)];
 
@@ -177,10 +181,16 @@ impl Patchsets {
 impl Component for Patchsets {
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
         let action = match self.local_mode {
-            LocalMode::Listing | LocalMode::Thread => match key.code {
+            LocalMode::Listing => match key.code {
                 KeyCode::Char('j') => Some(Action::PatchsetsAddIndex),
                 KeyCode::Char('k') => Some(Action::PatchsetsSubIndex),
                 KeyCode::Enter => Some(Action::PatchsetsThread),
+                _ => None,
+            },
+            LocalMode::Thread => match key.code {
+                KeyCode::Char('j') => Some(Action::PatchsetsAddIndex),
+                KeyCode::Char('k') => Some(Action::PatchsetsSubIndex),
+                KeyCode::Esc => Some(Action::PatchsetsSetMode(LocalMode::Listing)),
                 _ => None,
             },
             _ => None,
@@ -195,18 +205,22 @@ impl Component for Patchsets {
             Action::PatchsetsList(json_path_str) => self.prepare_list(json_path_str)?,
             Action::PatchsetsAddIndex => match self.local_mode {
                 LocalMode::Listing => {
-                    if self.index < self.roots.len() - 1 {
-                        self.index = self.index + 1;
+                    if self.list_index < self.roots.len() - 1 {
+                        self.list_index = self.list_index + 1;
                     }
                 }
                 LocalMode::Thread => {
-                    if self.index < self.thread.len() - 1 {
-                        self.index = self.index + 1;
+                    if self.thread_index < self.thread.len() - 1 {
+                        self.thread_index = self.thread_index + 1;
                     }
                 }
                 _ => {}
             },
-            Action::PatchsetsSubIndex => self.index = self.index.saturating_sub(1),
+            Action::PatchsetsSubIndex => match self.local_mode {
+                LocalMode::Listing => self.list_index = self.list_index.saturating_sub(1),
+                LocalMode::Thread => self.thread_index = self.thread_index.saturating_sub(1),
+                _ => {}
+            },
             Action::PatchsetsThread => self.open_thread(),
             _ => {}
         }
@@ -250,7 +264,7 @@ impl Component for Patchsets {
                 .highlight_spacing(HighlightSpacing::Always);
 
             let mut list_state = ListState::default();
-            list_state.select(Some(self.index));
+            list_state.select(Some(self.list_index));
 
             frame.render_stateful_widget(list, rects[1], &mut list_state);
         } else if self.local_mode == LocalMode::Thread {
@@ -285,7 +299,7 @@ impl Component for Patchsets {
                 .highlight_spacing(HighlightSpacing::Always);
 
             let mut list_state = ListState::default();
-            list_state.select(Some(self.index));
+            list_state.select(Some(self.thread_index));
 
             frame.render_stateful_widget(list, rects[1], &mut list_state);
         }
