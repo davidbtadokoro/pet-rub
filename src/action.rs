@@ -15,10 +15,8 @@ pub enum Action {
     Error(String),
     Help,
     LeiSetMode(lei::LocalMode),
-    LeiUpdateInbox,
-    LeiEnterProcessing,
-    LeiExitProcessing,
     LeiFetchPatchsets,
+    // TODO: Implement Lei action to have local public inbox for faster loadings
     PatchsetsList(String),
     PatchsetsAddIndex,
     PatchsetsSubIndex,
