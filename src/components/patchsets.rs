@@ -34,6 +34,7 @@ struct Node {
 enum LocalMode {
     Idle,
     Listing,
+    Thread,
 }
 
 pub struct Patchsets {
@@ -43,6 +44,7 @@ pub struct Patchsets {
     map_id_children: HashMap<String, Vec<String>>,
     roots: Vec<Node>,
     index: usize,
+    thread: Vec<String>,
 }
 
 impl Patchsets {
@@ -54,6 +56,7 @@ impl Patchsets {
             map_id_children: HashMap::new(),
             roots: Vec::new(),
             index: 0,
+            thread: Vec::new(),
         }
     }
 
@@ -88,6 +91,25 @@ impl Patchsets {
             }
         }
 
+        for children in self.map_id_children.values_mut() {
+            children.sort_unstable_by(|a_m_id, b_m_id| {
+                let a_datetime = self
+                    .map_id_message
+                    .get(a_m_id)
+                    .map(|message| message.date_time.as_str())
+                    .unwrap_or("");
+                let b_datetime = self
+                    .map_id_message
+                    .get(b_m_id)
+                    .map(|m| m.date_time.as_str())
+                    .unwrap_or("");
+
+                // Compare strings directly since they are ISO 8601
+                // This sorts them descending (latest replies first).
+                b_datetime.cmp(a_datetime)
+            });
+        }
+
         for root in &mut self.roots {
             let mut max_ts = String::new();
             // Use a simple vector as a stack for an iterative DFS
@@ -117,14 +139,40 @@ impl Patchsets {
         self.local_mode = LocalMode::Listing;
         Ok(())
     }
+
+    fn open_thread(&mut self) {
+        let root_m_id = self.roots.get(self.index).unwrap().m_id.clone();
+        self.index = 0;
+
+        let mut stack = vec![(0, root_m_id)];
+
+        while let Some((i, current_m_id)) = stack.pop() {
+            if let Some(message) = self.map_id_message.get(&current_m_id) {
+                let line = if i != 0 {
+                    format!("{}\u{21B3} {}", "  ".repeat(i), &message.subject)
+                } else {
+                    message.subject.clone()
+                };
+                self.thread.push(line);
+            }
+
+            // If this message has replies, push them to the stack to be processed
+            if let Some(children) = self.map_id_children.get(&current_m_id) {
+                stack.extend(children.iter().map(|c| (i + 1, c.clone())));
+            }
+        }
+
+        self.local_mode = LocalMode::Thread;
+    }
 }
 
 impl Component for Patchsets {
     fn handle_key_event(&mut self, key: KeyEvent) -> color_eyre::Result<Option<Action>> {
         let action = match self.local_mode {
-            LocalMode::Listing => match key.code {
+            LocalMode::Listing | LocalMode::Thread => match key.code {
                 KeyCode::Char('j') => Some(Action::PatchsetsAddIndex),
                 KeyCode::Char('k') => Some(Action::PatchsetsSubIndex),
+                KeyCode::Enter => Some(Action::PatchsetsThread),
                 _ => None,
             },
             _ => None,
@@ -136,12 +184,21 @@ impl Component for Patchsets {
     fn update(&mut self, action: Action) -> color_eyre::Result<Option<Action>> {
         match action {
             Action::PatchsetsList(json_path_str) => self.prepare_list(json_path_str)?,
-            Action::PatchsetsAddIndex => {
-                if self.index < self.roots.len() - 1 {
-                    self.index = self.index + 1;
+            Action::PatchsetsAddIndex => match self.local_mode {
+                LocalMode::Listing => {
+                    if self.index < self.roots.len() - 1 {
+                        self.index = self.index + 1;
+                    }
                 }
-            }
+                LocalMode::Thread => {
+                    if self.index < self.thread.len() - 1 {
+                        self.index = self.index + 1;
+                    }
+                }
+                _ => {}
+            },
             Action::PatchsetsSubIndex => self.index = self.index.saturating_sub(1),
+            Action::PatchsetsThread => self.open_thread(),
             _ => {}
         }
         Ok(None)
@@ -179,7 +236,42 @@ impl Component for Patchsets {
             let list_block = Block::default().borders(Borders::NONE);
             let list = List::new(list_items)
                 .block(list_block)
-                .highlight_style(Style::default().fg(Color::Cyan))
+                .highlight_style(Style::default().fg(Color::Black).bg(Color::LightYellow))
+                .highlight_symbol(">")
+                .highlight_spacing(HighlightSpacing::Always);
+
+            let mut list_state = ListState::default();
+            list_state.select(Some(self.index));
+
+            frame.render_stateful_widget(list, rects[1], &mut list_state);
+        } else if self.local_mode == LocalMode::Thread {
+            let rects = Layout::default()
+                .constraints(
+                    [
+                        Constraint::Min(1),
+                        Constraint::Percentage(100),
+                        Constraint::Min(4),
+                    ]
+                    .as_ref(),
+                )
+                .split(area);
+            let rects = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(
+                    [
+                        Constraint::Min(1),
+                        Constraint::Percentage(100),
+                        Constraint::Min(1),
+                    ]
+                    .as_ref(),
+                )
+                .split(rects[1]);
+
+            let list_items: Vec<String> = self.thread.clone();
+            let list_block = Block::default().borders(Borders::NONE);
+            let list = List::new(list_items)
+                .block(list_block)
+                .highlight_style(Style::default().fg(Color::Black).bg(Color::LightYellow))
                 .highlight_symbol(">")
                 .highlight_spacing(HighlightSpacing::Always);
 

@@ -22,4 +22,5 @@ pub enum Action {
     PatchsetsList(String),
     PatchsetsAddIndex,
     PatchsetsSubIndex,
+    PatchsetsThread,
 }
