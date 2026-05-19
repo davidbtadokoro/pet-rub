@@ -67,7 +67,6 @@ impl Lei {
             data_dir.push(format!("{list}.json"));
             let json_path_str = data_dir.to_str().unwrap();
 
-            // Update Public Inbox
             info!("fetching patchsets from {inbox_dir_str}");
             if let Ok(output) = File::create(&json_path_str) {
                 if let Ok(exit_status) = Command::new("lei")
