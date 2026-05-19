@@ -46,7 +46,7 @@ pub struct Patchsets {
     map_id_children: HashMap<String, Vec<String>>,
     roots: Vec<Node>,
     list_index: usize,
-    thread: Vec<String>,
+    thread: Vec<(usize, String)>,
     thread_index: usize,
 }
 
@@ -159,13 +159,8 @@ impl Patchsets {
         let mut stack = vec![(0, root_m_id)];
 
         while let Some((i, current_m_id)) = stack.pop() {
-            if let Some(message) = self.map_id_message.get(&current_m_id) {
-                let line = if i != 0 {
-                    format!("{}\u{21B3} {}", "  ".repeat(i), &message.subject)
-                } else {
-                    message.subject.clone()
-                };
-                self.thread.push(line);
+            if let Some(_) = self.map_id_message.get(&current_m_id) {
+                self.thread.push((i, current_m_id.clone()));
             }
 
             // If this message has replies, push them to the stack to be processed
@@ -299,7 +294,27 @@ impl Component for Patchsets {
                 )
                 .split(rects[1]);
 
-            let list_items: Vec<String> = self.thread.clone();
+            let list_items: Vec<String> = self
+                .thread
+                .iter()
+                .map(|i_and_m_id| {
+                    let (i, m_id) = i_and_m_id;
+                    let message = self.map_id_message.get(m_id).unwrap().clone();
+                    let author_name = if let Some(name) = message.from[0][0].as_ref() {
+                        name
+                    } else {
+                        "null"
+                    };
+                    let author_email = message.from[0][1].as_ref().unwrap();
+                    let line = format!("{} | {} <{}>", message.subject, author_name, author_email);
+
+                    if *i != 0 {
+                        format!("{}\u{21B3} {}", "  ".repeat(*i), line)
+                    } else {
+                        line
+                    }
+                })
+                .collect();
             let list_block = Block::default().borders(Borders::NONE);
             let list = List::new(list_items)
                 .block(list_block)
