@@ -17,7 +17,6 @@ use crate::{action::Action, components::Component, config::Config};
 const MAX_NOTIFICATION_TICKS: usize = 8;
 const MAX_SPINNER: usize = 4;
 const SPINNER: [&str; MAX_SPINNER] = ["", ".", "..", "..."];
-const LAST_MONTH_QUERY: &str = "((s:patch OR s:rfc) AND NOT s:re:) AND rt:1.month.ago..";
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum LocalMode {
@@ -32,22 +31,32 @@ pub struct Lei {
     local_mode: LocalMode,
     spinner: usize,
     notification_ticks: usize,
+    domain: String,
+    list: String,
+    query: String,
 }
 
 impl Lei {
-    pub fn new() -> Self {
+    pub fn new(domain: String, list: String, query: String) -> Self {
         Self {
             command_tx: None,
             config: Config::default(),
             local_mode: LocalMode::Idle,
             spinner: 0,
             notification_ticks: 0,
+            domain,
+            list,
+            query
         }
     }
 
-    fn fetch_patchsets(&self, list: String, query: String) {
+    fn fetch_patchsets(&self) {
         let tx = self.command_tx.clone().unwrap();
         let mut data_dir = self.config.config.data_dir.clone();
+        let domain = self.domain.clone();
+        let list = self.list.clone();
+        let query = self.query.clone();
+
         tokio::spawn(async move {
             tx.send(Action::LeiSetMode(LocalMode::Processing)).unwrap();
 
@@ -63,7 +72,7 @@ impl Lei {
             if let Ok(output) = File::create(&json_path_str) {
                 if let Ok(exit_status) = Command::new("lei")
                     .arg("q")
-                    .arg("--only=https://lore.kernel.org/amd-gfx/")
+                    .arg(format!("--only=https://{domain}/{list}/"))
                     .arg("--no-local")
                     .arg("--threads")
                     .arg("--dedupe=mid")
@@ -142,7 +151,7 @@ impl Component for Lei {
                 }
             },
             Action::LeiFetchPatchsets => {
-                self.fetch_patchsets("amd-gfx".to_string(), LAST_MONTH_QUERY.to_string())
+                self.fetch_patchsets()
             }
             _ => {}
         }

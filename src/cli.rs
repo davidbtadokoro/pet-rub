@@ -6,12 +6,24 @@ use crate::config::{get_config_dir, get_data_dir};
 #[command(author, version = version(), about)]
 pub struct Cli {
     /// Tick rate, i.e. number of ticks per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 4.0)]
+    #[arg(short, long, value_name = "TPS", default_value_t = 4.0)]
     pub tick_rate: f64,
 
     /// Frame rate, i.e. number of frames per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 60.0)]
+    #[arg(short, long, value_name = "FPS", default_value_t = 30.0)]
     pub frame_rate: f64,
+
+    /// Domain name of target Lore instance
+    #[arg(short, long, value_name = "lore-domain", default_value_t = String::from("lore.kernel.org"))]
+    pub domain: String,
+
+    /// Target mailing list
+    #[arg(short, long, value_name = "mailing-list", default_value_t = String::from("amd-gfx"))]
+    pub list: String,
+
+    /// Xapian queries
+    #[arg(short, long, value_name = "query", default_value_t = String::from("((s:patch OR s:rfc) AND NOT s:re:) AND rt:1.month.ago.."))]
+    pub query: String,
 }
 
 const VERSION_MESSAGE: &str = concat!(

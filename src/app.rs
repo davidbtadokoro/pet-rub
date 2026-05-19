@@ -31,12 +31,12 @@ pub enum Mode {
 }
 
 impl App {
-    pub fn new(tick_rate: f64, frame_rate: f64) -> color_eyre::Result<Self> {
+    pub fn new(tick_rate: f64, frame_rate: f64, domain: String, list: String, query: String) -> color_eyre::Result<Self> {
         let (action_tx, action_rx) = mpsc::unbounded_channel();
         Ok(Self {
             tick_rate,
             frame_rate,
-            components: vec![Box::new(Home::new()), Box::new(Lei::new()), Box::new(Patchsets::new())],
+            components: vec![Box::new(Home::new()), Box::new(Lei::new(domain, list, query)), Box::new(Patchsets::new())],
             should_quit: false,
             should_suspend: false,
             config: Config::new()?,
