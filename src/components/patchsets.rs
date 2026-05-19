@@ -7,7 +7,8 @@ use ratatui::{
     style::{Color, Style},
     widgets::{Block, Borders, HighlightSpacing, List, ListState},
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use strum::Display;
 
 use crate::{action::Action, components::Component};
 
@@ -30,9 +31,10 @@ struct Node {
     last_updated: String,
 }
 
-#[derive(PartialEq)]
-enum LocalMode {
+#[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
+pub enum LocalMode {
     Idle,
+    Processing,
     Listing,
     Thread,
 }
@@ -61,6 +63,12 @@ impl Patchsets {
     }
 
     fn prepare_list(&mut self, json_path_str: String) -> color_eyre::Result<()> {
+        self.messages = Vec::new();
+        self.map_id_message = HashMap::new();
+        self.map_id_children = HashMap::new();
+        self.roots = Vec::new();
+        self.index = 0;
+
         let data = read_to_string(&json_path_str)?;
 
         let raw_values: Vec<serde_json::Value> = serde_json::from_str(&data)?;
@@ -183,6 +191,7 @@ impl Component for Patchsets {
 
     fn update(&mut self, action: Action) -> color_eyre::Result<Option<Action>> {
         match action {
+            Action::PatchsetsSetMode(local_mode) => self.local_mode = local_mode,
             Action::PatchsetsList(json_path_str) => self.prepare_list(json_path_str)?,
             Action::PatchsetsAddIndex => match self.local_mode {
                 LocalMode::Listing => {

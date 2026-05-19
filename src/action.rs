@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-use crate::components::lei;
+use crate::components::{lei, patchsets};
 
 #[derive(Debug, Clone, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum Action {
@@ -21,4 +21,5 @@ pub enum Action {
     PatchsetsAddIndex,
     PatchsetsSubIndex,
     PatchsetsThread,
+    PatchsetsSetMode(patchsets::LocalMode),
 }

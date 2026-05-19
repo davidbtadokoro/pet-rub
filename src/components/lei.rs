@@ -12,7 +12,11 @@ use strum::Display;
 use tokio::{process::Command, sync::mpsc::UnboundedSender};
 use tracing::{error, info};
 
-use crate::{action::Action, components::Component, config::Config};
+use crate::{
+    action::Action,
+    components::{Component, patchsets},
+    config::Config,
+};
 
 const MAX_NOTIFICATION_TICKS: usize = 8;
 const MAX_SPINNER: usize = 4;
@@ -68,6 +72,8 @@ impl Lei {
             let json_path_str = data_dir.to_str().unwrap();
 
             info!("fetching patchsets from {inbox_dir_str}");
+            tx.send(Action::PatchsetsSetMode(patchsets::LocalMode::Processing))
+                .unwrap();
             if let Ok(output) = File::create(&json_path_str) {
                 if let Ok(exit_status) = Command::new("lei")
                     .arg("q")
@@ -161,7 +167,14 @@ impl Component for Lei {
             .split(area);
         let rects = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
+            .constraints(
+                [
+                    Constraint::Percentage(30),
+                    Constraint::Percentage(40),
+                    Constraint::Percentage(30),
+                ]
+                .as_ref(),
+            )
             .split(rects[1]);
 
         let text = format!("{}/{}", self.domain, self.list);
