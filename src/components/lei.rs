@@ -156,39 +156,69 @@ impl Component for Lei {
     }
 
     fn draw(&mut self, frame: &mut Frame, area: Rect) -> color_eyre::Result<()> {
-        if self.local_mode != LocalMode::Idle {
-            let rects = Layout::default()
-                .constraints([Constraint::Percentage(100), Constraint::Min(3)].as_ref())
-                .split(area);
-            let rects = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([Constraint::Percentage(70), Constraint::Min(0)].as_ref())
-                .split(rects[1]);
+        let rects = Layout::default()
+            .constraints([Constraint::Percentage(100), Constraint::Min(3)].as_ref())
+            .split(area);
+        let rects = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(40), Constraint::Percentage(30)].as_ref())
+            .split(rects[1]);
 
-            let text = match self.local_mode {
-                LocalMode::Idle => "Idle".to_string(),
-                LocalMode::Processing => format!("Processing{}", SPINNER[self.spinner]),
-                LocalMode::ExitingProcessing => "Finished processing!".to_string(),
-            };
-            let style = match self.local_mode {
-                LocalMode::Idle | LocalMode::ExitingProcessing => Style::default().fg(Color::Cyan),
-                LocalMode::Processing => Style::default().fg(Color::Yellow),
-            };
-            frame.render_widget(
-                Paragraph::new(text)
-                    .block(
-                        Block::default()
-                            .title(" lei status ")
-                            .title_alignment(Alignment::Center)
-                            .borders(Borders::ALL)
-                            .border_style(style)
-                            .border_type(BorderType::Rounded),
-                    )
-                    .style(style)
-                    .alignment(Alignment::Center),
-                rects[1],
-            );
-        }
+        let text = format!("{}/{}", self.domain, self.list);
+        frame.render_widget(
+            Paragraph::new(text)
+                .block(
+                    Block::default()
+                        .title(" target ")
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(Color::Cyan))
+                        .border_type(BorderType::Rounded),
+                )
+                .style(Style::default().fg(Color::Cyan))
+                .alignment(Alignment::Center),
+            rects[0],
+        );
+
+        let text = format!("{}", self.query);
+        frame.render_widget(
+            Paragraph::new(text)
+                .block(
+                    Block::default()
+                        .title(" query ")
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .border_style(Style::default().fg(Color::Cyan))
+                        .border_type(BorderType::Rounded),
+                )
+                .style(Style::default().fg(Color::Cyan))
+                .alignment(Alignment::Center),
+            rects[1],
+        );
+
+        let text = match self.local_mode {
+            LocalMode::Idle => "Idle".to_string(),
+            LocalMode::Processing => format!("Processing{}", SPINNER[self.spinner]),
+            LocalMode::ExitingProcessing => "Finished processing!".to_string(),
+        };
+        let style = match self.local_mode {
+            LocalMode::Idle | LocalMode::ExitingProcessing => Style::default().fg(Color::Cyan),
+            LocalMode::Processing => Style::default().fg(Color::Yellow),
+        };
+        frame.render_widget(
+            Paragraph::new(text)
+                .block(
+                    Block::default()
+                        .title(" lei ")
+                        .title_alignment(Alignment::Center)
+                        .borders(Borders::ALL)
+                        .border_style(style)
+                        .border_type(BorderType::Rounded),
+                )
+                .style(style)
+                .alignment(Alignment::Center),
+            rects[2],
+        );
         Ok(())
     }
 }
