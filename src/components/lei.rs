@@ -46,7 +46,7 @@ impl Lei {
             notification_ticks: 0,
             domain,
             list,
-            query
+            query,
         }
     }
 
@@ -149,9 +149,7 @@ impl Component for Lei {
                     self.local_mode = LocalMode::ExitingProcessing;
                 }
             },
-            Action::LeiFetchPatchsets => {
-                self.fetch_patchsets()
-            }
+            Action::LeiFetchPatchsets => self.fetch_patchsets(),
             _ => {}
         }
         Ok(None)
