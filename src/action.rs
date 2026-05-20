@@ -22,4 +22,5 @@ pub enum Action {
     PatchsetsSubIndex,
     PatchsetsThread,
     PatchsetsSetMode(patchsets::LocalMode),
+    KtreeApply(String),
 }

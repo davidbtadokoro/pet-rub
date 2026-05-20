@@ -6,7 +6,7 @@ use tracing::{debug, info};
 
 use crate::{
     action::Action,
-    components::{Component, home::Home, lei::Lei, patchsets::Patchsets},
+    components::{Component, home::Home, ktree::Ktree, lei::Lei, patchsets::Patchsets},
     config::Config,
     tui::{Event, Tui},
 };
@@ -46,6 +46,7 @@ impl App {
                 Box::new(Home::new()),
                 Box::new(Lei::new(domain, list, query)),
                 Box::new(Patchsets::new()),
+                Box::new(Ktree::new()),
             ],
             should_quit: false,
             should_suspend: false,
